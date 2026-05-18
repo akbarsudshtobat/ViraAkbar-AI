@@ -50,6 +50,7 @@ body {
     color: var(--text-primary);
     overflow: hidden;
     height: 100vh;
+    height: 100dvh;
     display: flex;
 }
 
@@ -794,6 +795,7 @@ body {
         transform: translateX(-100%);
         box-shadow: 4px 0 24px rgba(0,0,0,0.5);
         height: 100vh;
+        height: 100dvh;
         z-index: 100;
     }
     .sidebar.open {
@@ -811,6 +813,7 @@ body {
     .chat-main {
         padding-top: var(--topbar-h);
         height: 100vh;
+        height: 100dvh;
     }
 
     .messages-container {
