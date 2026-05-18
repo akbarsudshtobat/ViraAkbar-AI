@@ -792,10 +792,16 @@ body {
         left: 0;
         top: 0;
         transform: translateX(-100%);
-        box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+        height: 100vh;
+        z-index: 100;
     }
     .sidebar.open {
         transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        backdrop-filter: blur(4px);
     }
 
     .mobile-topbar {
@@ -804,26 +810,120 @@ body {
 
     .chat-main {
         padding-top: var(--topbar-h);
+        height: 100vh;
+    }
+
+    .messages-container {
+        padding: 1rem 0;
     }
 
     .message-row {
-        padding: 0.5rem 1rem;
+        padding: 0.5rem 0.8rem;
+        gap: 0.5rem;
     }
 
-    .input-bar-wrap {
-        padding: 0 1rem 0.75rem;
+    .msg-avatar {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 0.85rem;
+        margin-top: 1px;
+    }
+
+    .msg-bubble {
+        max-width: 90% !important;
+        padding: 0.75rem 0.9rem !important;
+    }
+
+    .msg-content {
+        font-size: 0.88rem;
+        line-height: 1.6;
+    }
+
+    /* Welcome Screen Optimizations */
+    .welcome-screen {
+        padding: 1rem 0.8rem;
+        justify-content: flex-start;
+    }
+
+    .welcome-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.6rem;
     }
 
     .welcome-title {
         font-size: 1.6rem;
+        line-height: 1.2;
+        letter-spacing: -1px;
+        margin-bottom: 0.3rem;
+    }
+
+    .welcome-sub {
+        font-size: 0.88rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .welcome-status {
+        margin-bottom: 1.5rem;
+        font-size: 0.72rem;
+        padding: 0.25rem 0.75rem;
     }
 
     .welcome-cards {
         grid-template-columns: 1fr;
-        max-width: 320px;
+        max-width: 100%;
+        gap: 0.6rem;
+        padding: 0 0.5rem;
     }
 
-    .msg-bubble {
-        max-width: 88% !important;
+    .wc-card {
+        padding: 0.9rem 1.1rem;
+    }
+
+    .wc-icon {
+        font-size: 1.2rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .wc-title {
+        font-size: 0.85rem;
+    }
+
+    .wc-desc {
+        font-size: 0.72rem;
+    }
+
+    /* Input Bar Optimizations */
+    .input-bar-wrap {
+        padding: 0 0.8rem 0.6rem;
+    }
+
+    .input-bar {
+        border-radius: var(--radius-lg);
+        padding: 0.4rem 0.4rem 0.4rem 0.9rem;
+    }
+
+    .input-bar textarea {
+        font-size: 16px !important; /* CRITICAL: Prevents automatic zoom-in on iOS Safari when focused */
+        padding: 0.3rem 0;
+        max-height: 100px;
+    }
+
+    .btn-send {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 8px;
+    }
+
+    .btn-send svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .input-disclaimer {
+        font-size: 0.62rem;
+        margin-top: 0.35rem;
     }
 }
