@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let messageCount = 0;
     let promptCount  = 0;
     let isProcessing = false;
+    let chatHistory  = [];
 
     // ───────────── Configure Marked.js ─────────────
     marked.setOptions({
@@ -76,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset stats
         messageCount = 0;
         promptCount = 0;
+        chatHistory = [];
         updateStats();
 
         // Close sidebar on mobile
@@ -216,10 +218,18 @@ document.addEventListener('DOMContentLoaded', () => {
         scrollToBottom();
 
         try {
+            const payload = {
+                message: text,
+                history: chatHistory
+            };
+            
+            // Simpan pesan user ke history untuk request berikutnya
+            chatHistory.push({ role: 'user', text: text });
+
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
@@ -231,6 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errorMsg = createMessageElement('assistant', `⚠️ Error: ${data.error}`);
                 messagesContainer.appendChild(errorMsg);
             } else {
+                // Simpan balasan AI ke history
+                chatHistory.push({ role: 'assistant', text: data.reply });
+
                 // Add assistant message with typing effect
                 const assistantRow = document.createElement('div');
                 assistantRow.className = 'message-row assistant-row';
