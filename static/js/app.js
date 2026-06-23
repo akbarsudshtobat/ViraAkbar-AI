@@ -45,7 +45,33 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.history-dropdown').forEach(d => d.remove());
             document.querySelectorAll('.history-options-btn.active').forEach(b => b.classList.remove('active'));
         }
+        
+        // Account menu click-outside logic
+        if (typeof menuOpen !== 'undefined' && menuOpen && accountMenu && profileBtn && !accountMenu.contains(e.target) && !profileBtn.contains(e.target)) {
+            menuOpen = false;
+            accountMenu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            accountMenu.classList.remove('opacity-100', 'translate-y-0');
+        }
     });
+
+    // Account Dropdown Logic
+    const profileBtn = document.getElementById('profile-btn');
+    const accountMenu = document.getElementById('account-menu');
+    let menuOpen = false;
+
+    if (profileBtn && accountMenu) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuOpen = !menuOpen;
+            if (menuOpen) {
+                accountMenu.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+                accountMenu.classList.add('opacity-100', 'translate-y-0');
+            } else {
+                accountMenu.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+                accountMenu.classList.remove('opacity-100', 'translate-y-0');
+            }
+        });
+    }
 
     btnThemeToggle.addEventListener('click', () => {
         const currentTheme = document.documentElement.getAttribute('data-theme');
@@ -55,8 +81,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     btnToggleSidebar.addEventListener('click', () => {
-        sidebar.classList.add('collapsed');
-        btnOpenSidebar.style.display = 'block';
+        if (window.innerWidth <= 768) {
+            sidebar.classList.add('collapsed');
+            btnOpenSidebar.style.display = 'block';
+        } else {
+            if (sidebar.classList.contains('sidebar-expanded')) {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+            }
+        }
     });
 
     btnOpenSidebar.addEventListener('click', () => {
@@ -146,13 +182,17 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = 'history-item';
             if (chat.id === currentChatId) item.classList.add('active');
 
+            const iconSvg = document.createElement('div');
+            iconSvg.className = 'menu-icon text-gray-500 mr-2 flex-shrink-0';
+            iconSvg.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+
             const titleSpan = document.createElement('span');
-            titleSpan.className = 'history-title-text';
+            titleSpan.className = 'history-title-text hide-on-collapse text-black dark:text-white';
             titleSpan.textContent = chat.title;
 
             // Options Button (3 dots)
             const optBtn = document.createElement('button');
-            optBtn.className = 'history-options-btn';
+            optBtn.className = 'history-options-btn hide-on-collapse';
             optBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
             
             optBtn.addEventListener('click', (e) => {
@@ -160,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showDropdown(optBtn, chat.id, titleSpan);
             });
 
+            item.appendChild(iconSvg);
             item.appendChild(titleSpan);
             item.appendChild(optBtn);
 

@@ -17,31 +17,128 @@
     
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Tailwind CSS for Sidebar -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    colors: {
+                        lightBg: '#F9F9F9',
+                        darkBg: '#121212',
+                        hoverLight: '#ECECEC',
+                        hoverDark: '#2F2F2F',
+                        borderLight: '#E5E7EB',
+                        borderDark: '#262626'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .sidebar {
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .sidebar-expanded {
+            width: 260px;
+        }
+        .sidebar-collapsed {
+            width: 72px;
+        }
+        .hide-on-collapse {
+            transition: opacity 0.2s ease, width 0.2s ease;
+            white-space: nowrap;
+        }
+        .sidebar-collapsed .hide-on-collapse {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            display: none;
+        }
+        .sidebar-collapsed .history-item {
+            justify-content: center;
+        }
+        .sidebar-collapsed .menu-item {
+            justify-content: center;
+        }
+        .sidebar-collapsed .menu-icon {
+            margin-right: 0;
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <button class="btn-icon" id="btnToggleSidebar" title="Tutup Sidebar">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        <aside id="sidebar" class="sidebar sidebar-expanded h-full flex flex-col bg-lightBg dark:bg-darkBg border-r border-borderLight dark:border-borderDark relative z-20">
+            <!-- Header & Toggle Sidebar -->
+            <div class="flex items-center justify-between p-3">
+                <div class="flex items-center gap-3 overflow-hidden hide-on-collapse">
+                    <div class="min-w-[32px] h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
+                        <span class="text-white dark:text-black font-bold text-sm">VA</span>
+                    </div>
+                    <span class="font-semibold text-lg whitespace-nowrap text-black dark:text-white">ViraAkbar.AI</span>
+                </div>
+                <button id="btnToggleSidebar" title="Toggle Sidebar" class="p-2 mx-auto rounded-md hover:bg-hoverLight dark:hover:bg-hoverDark text-gray-600 dark:text-gray-400 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
                 </button>
             </div>
-            
-            <button class="btn-new-chat" id="btnNewChat">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                New Chat
-            </button>
-            
-            <div class="history-list" id="historyList">
-                <p class="history-title">History</p>
-                <!-- History items would go here in the future -->
+
+            <!-- Tengah: Tombol Aksi & Recents -->
+            <div class="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-1 px-3 py-2">
+                <button id="btnNewChat" class="menu-item flex items-center p-2 rounded-md hover:bg-hoverLight dark:hover:bg-hoverDark transition-colors w-full text-left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="menu-icon h-5 w-5 min-w-[20px] mr-3 text-black dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span class="font-medium hide-on-collapse text-black dark:text-white">New Chat</span>
+                </button>
+
+                <button class="menu-item flex items-center p-2 rounded-md hover:bg-hoverLight dark:hover:bg-hoverDark transition-colors w-full text-left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="menu-icon h-5 w-5 min-w-[20px] mr-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span class="hide-on-collapse text-gray-600 dark:text-gray-400 text-sm">Search chats</span>
+                </button>
+
+                <div class="mt-5 mb-2 px-2 hide-on-collapse">
+                    <span class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recents</span>
+                </div>
+
+                <div id="historyList" class="flex flex-col gap-1 w-full">
+                    <!-- History items will be rendered here by app.js -->
+                </div>
             </div>
-            
-            <div class="sidebar-footer">
-                <button class="btn-theme" id="btnThemeToggle">
-                    <span class="icon-light">☀️ Light Mode</span>
-                    <span class="icon-dark">🌙 Dark Mode</span>
+
+            <!-- Bawah: Akun & Login -->
+            <div class="mt-auto p-3 relative">
+                <div id="account-menu" class="absolute bottom-full left-3 mb-2 w-56 bg-white dark:bg-[#202020] border border-borderLight dark:border-borderDark rounded-xl shadow-xl opacity-0 pointer-events-none transition-all duration-200 transform translate-y-2 z-50">
+                    <div class="py-1">
+                        <button class="w-full text-left px-4 py-2.5 text-sm hover:bg-hoverLight dark:hover:bg-hoverDark transition-colors text-black dark:text-white">Profile</button>
+                        <button class="w-full text-left px-4 py-2.5 text-sm hover:bg-hoverLight dark:hover:bg-hoverDark transition-colors text-black dark:text-white">Settings</button>
+                        <button id="btnThemeToggle" class="w-full flex justify-between items-center px-4 py-2.5 text-sm hover:bg-hoverLight dark:hover:bg-hoverDark transition-colors text-black dark:text-white">
+                            <span>Toggle Theme</span>
+                            <span class="icon-light text-yellow-500">☀️</span>
+                            <span class="icon-dark text-gray-300">🌙</span>
+                        </button>
+                        <div class="border-t border-borderLight dark:border-borderDark my-1"></div>
+                        <button class="w-full text-left px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Log out</button>
+                    </div>
+                </div>
+
+                <button id="profile-btn" class="w-full flex items-center p-2 rounded-lg hover:bg-hoverLight dark:hover:bg-hoverDark transition-colors text-left">
+                    <div class="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center flex-shrink-0 mx-auto">
+                        <span class="text-sm font-bold text-gray-800 dark:text-gray-100 tracking-wider">RI</span>
+                    </div>
+                    <div class="flex-1 ml-3 truncate hide-on-collapse">
+                        <div class="text-sm font-semibold truncate leading-tight text-black dark:text-white">riyanakbar</div>
+                        <div class="text-[11px] font-medium text-gray-500 dark:text-gray-400">Free</div>
+                    </div>
+                    <div class="hide-on-collapse ml-2">
+                        <span class="text-[10px] font-semibold px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-md">Upgrade</span>
+                    </div>
                 </button>
             </div>
         </aside>
