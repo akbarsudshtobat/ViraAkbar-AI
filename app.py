@@ -2,6 +2,14 @@ from flask import Flask, render_template, request, jsonify, session
 import os
 from groq import Groq
 
+# Load variables from .env file automatically
+if os.path.exists('.env'):
+    with open('.env', 'r') as f:
+        for line in f:
+            if '=' in line and not line.strip().startswith('#'):
+                k, v = line.strip().split('=', 1)
+                os.environ[k.strip()] = v.strip().strip("'").strip('"')
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 

@@ -1,28 +1,28 @@
-/* ═══════════════════════════════════════════════════════════
-   ViraAkbar.AI — Chat Frontend Logic
-   ═══════════════════════════════════════════════════════════ */
-
 document.addEventListener('DOMContentLoaded', () => {
+    // === Variables & Elements ===
+    const theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
 
-    // ───────────── DOM References ─────────────
-    const chatInput       = document.getElementById('chatInput');
-    const btnSend         = document.getElementById('btnSend');
-    const btnNewChat      = document.getElementById('btnNewChat');
+    const btnThemeToggle = document.getElementById('btnThemeToggle');
+    const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+    const btnOpenSidebar = document.getElementById('btnOpenSidebar');
+    const sidebar = document.getElementById('sidebar');
+    const chatInput = document.getElementById('chatInput');
+    const btnSend = document.getElementById('btnSend');
     const messagesContainer = document.getElementById('messagesContainer');
-    const welcomeScreen   = document.getElementById('welcomeScreen');
-    const sidebar         = document.getElementById('sidebar');
-    const sidebarOverlay  = document.getElementById('sidebarOverlay');
-    const btnMenu         = document.getElementById('btnMenu');
-    const statMessages    = document.getElementById('statMessages');
-    const statPrompts     = document.getElementById('statPrompts');
-    const welcomeCards    = document.querySelectorAll('.wc-card');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const btnNewChat = document.getElementById('btnNewChat');
+    const chatArea = document.getElementById('chatArea');
+    const historyList = document.getElementById('historyList');
 
-    let messageCount = 0;
-    let promptCount  = 0;
     let isProcessing = false;
-    let chatHistory  = [];
+    let chatHistory = [];
+    
+    // --- State History ---
+    let chats = JSON.parse(localStorage.getItem('vira_chats')) || [];
+    let currentChatId = null;
 
-    // ───────────── Configure Marked.js ─────────────
+    // === Configuration ===
     marked.setOptions({
         highlight: function(code, lang) {
             if (lang && hljs.getLanguage(lang)) {
@@ -31,17 +31,63 @@ document.addEventListener('DOMContentLoaded', () => {
             return hljs.highlightAuto(code).value;
         },
         breaks: true,
-        gfm: true,
+        gfm: true
     });
 
-    // ───────────── Auto-resize Textarea ─────────────
+    // === Init ===
+    renderHistoryList();
+
+    // === Event Listeners ===
+    
+    // Global click to close dropdowns
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.history-options-btn') && !e.target.closest('.history-dropdown')) {
+            document.querySelectorAll('.history-dropdown').forEach(d => d.remove());
+            document.querySelectorAll('.history-options-btn.active').forEach(b => b.classList.remove('active'));
+        }
+    });
+
+    btnThemeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+
+    btnToggleSidebar.addEventListener('click', () => {
+        sidebar.classList.add('collapsed');
+        btnOpenSidebar.style.display = 'block';
+    });
+
+    btnOpenSidebar.addEventListener('click', () => {
+        sidebar.classList.remove('collapsed');
+        btnOpenSidebar.style.display = 'none';
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth <= 768 && !sidebar.classList.contains('collapsed')) {
+            sidebar.classList.add('collapsed');
+            btnOpenSidebar.style.display = 'block';
+        } else if (window.innerWidth > 768 && sidebar.classList.contains('collapsed')) {
+            sidebar.classList.remove('collapsed');
+            btnOpenSidebar.style.display = 'none';
+        }
+    });
+
+    btnNewChat.addEventListener('click', () => {
+        startNewChat();
+        if (window.innerWidth <= 768) {
+            sidebar.classList.add('collapsed');
+            btnOpenSidebar.style.display = 'block';
+        }
+    });
+
     chatInput.addEventListener('input', () => {
         chatInput.style.height = 'auto';
-        chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px';
         btnSend.disabled = chatInput.value.trim() === '' || isProcessing;
     });
 
-    // ───────────── Keyboard Shortcuts ─────────────
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -51,228 +97,271 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnSend.addEventListener('click', sendMessage);
 
-    // ───────────── Welcome Card Clicks ─────────────
-    welcomeCards.forEach(card => {
-        card.addEventListener('click', () => {
-            const prompt = card.getAttribute('data-prompt');
-            chatInput.value = prompt;
-            chatInput.dispatchEvent(new Event('input'));
-            sendMessage();
-        });
-    });
+    // === Functions ===
 
-    // ───────────── New Chat ─────────────
-    btnNewChat.addEventListener('click', async () => {
-        try {
-            await fetch('/api/new-chat', { method: 'POST' });
-        } catch (e) { /* ignore */ }
-
-        // Clear messages from DOM
-        const msgRows = messagesContainer.querySelectorAll('.message-row');
-        msgRows.forEach(row => row.remove());
-
-        // Show welcome screen again
-        if (welcomeScreen) welcomeScreen.style.display = 'flex';
-
-        // Reset stats
-        messageCount = 0;
-        promptCount = 0;
+    function startNewChat() {
+        currentChatId = null;
         chatHistory = [];
-        updateStats();
-
-        // Close sidebar on mobile
-        closeSidebar();
-    });
-
-    // ───────────── Mobile Sidebar Toggle ─────────────
-    if (btnMenu) {
-        btnMenu.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            sidebarOverlay.classList.toggle('active');
-        });
-    }
-    if (sidebarOverlay) {
-        sidebarOverlay.addEventListener('click', closeSidebar);
+        messagesContainer.innerHTML = '';
+        welcomeScreen.style.display = 'flex';
+        renderHistoryList(); // updates active state
+        fetch('/api/new-chat', { method: 'POST' }).catch(() => {});
     }
 
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('active');
+    function generateId() {
+        return Math.random().toString(36).substring(2, 15);
     }
 
-    // ───────────── Update Stats ─────────────
-    function updateStats() {
-        statMessages.textContent = messageCount;
-        statPrompts.textContent  = promptCount;
+    function saveChats() {
+        localStorage.setItem('vira_chats', JSON.stringify(chats));
     }
 
-    // ───────────── Scroll to Bottom ─────────────
-    function scrollToBottom() {
-        messagesContainer.scrollTo({
-            top: messagesContainer.scrollHeight,
-            behavior: 'smooth'
-        });
+    function generateTitle(firstMessage) {
+        const words = firstMessage.trim().split(/\s+/);
+        if (words.length <= 4) return firstMessage;
+        return words.slice(0, 4).join(' ') + '...';
     }
 
-    // ───────────── Create Message Element ─────────────
-    function createMessageElement(role, content) {
-        const row = document.createElement('div');
-        row.className = `message-row ${role}-row`;
+    function renderHistoryList() {
+        // Hapus semua history items kecuali title
+        const items = historyList.querySelectorAll('.history-item');
+        items.forEach(item => item.remove());
 
-        const avatar = document.createElement('div');
-        avatar.className = 'msg-avatar';
-        avatar.textContent = role === 'user' ? '👤' : '✨';
-
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble';
-
-        const msgContent = document.createElement('div');
-        msgContent.className = 'msg-content';
-
-        if (role === 'assistant') {
-            // Render markdown for assistant
-            msgContent.innerHTML = marked.parse(content);
-            // Add copy buttons to code blocks
-            addCopyButtons(msgContent);
-        } else {
-            // Plain text for user (escape HTML)
-            msgContent.textContent = content;
+        if (chats.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'history-item';
+            emptyMsg.style.color = 'var(--text-secondary)';
+            emptyMsg.style.cursor = 'default';
+            emptyMsg.style.fontSize = '12px';
+            emptyMsg.textContent = 'Belum ada percakapan.';
+            historyList.appendChild(emptyMsg);
+            return;
         }
 
-        bubble.appendChild(msgContent);
-        row.appendChild(avatar);
-        row.appendChild(bubble);
+        // Urutkan chats: terbaru di atas
+        const sortedChats = [...chats].sort((a, b) => b.updatedAt - a.updatedAt);
 
-        return row;
-    }
+        sortedChats.forEach(chat => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            if (chat.id === currentChatId) item.classList.add('active');
 
-    // ───────────── Add Copy Buttons to Code ─────────────
-    function addCopyButtons(container) {
-        const preBlocks = container.querySelectorAll('pre');
-        preBlocks.forEach(pre => {
-            pre.style.position = 'relative';
-            const btn = document.createElement('button');
-            btn.className = 'code-copy-btn';
-            btn.textContent = 'Copy';
-            btn.addEventListener('click', () => {
-                const code = pre.querySelector('code');
-                navigator.clipboard.writeText(code.textContent).then(() => {
-                    btn.textContent = 'Copied!';
-                    setTimeout(() => btn.textContent = 'Copy', 2000);
-                });
+            const titleSpan = document.createElement('span');
+            titleSpan.className = 'history-title-text';
+            titleSpan.textContent = chat.title;
+
+            // Options Button (3 dots)
+            const optBtn = document.createElement('button');
+            optBtn.className = 'history-options-btn';
+            optBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+            
+            optBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // prevent chat selection
+                showDropdown(optBtn, chat.id, titleSpan);
             });
-            pre.appendChild(btn);
+
+            item.appendChild(titleSpan);
+            item.appendChild(optBtn);
+
+            // Select chat
+            item.addEventListener('click', () => {
+                loadChat(chat.id);
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.add('collapsed');
+                    btnOpenSidebar.style.display = 'block';
+                }
+            });
+
+            historyList.appendChild(item);
         });
     }
 
-    // ───────────── Create Typing Indicator ─────────────
-    function createTypingIndicator() {
-        const row = document.createElement('div');
-        row.className = 'message-row assistant-row';
-        row.id = 'typingRow';
+    function showDropdown(buttonEl, chatId, titleSpanEl) {
+        // Close existing
+        document.querySelectorAll('.history-dropdown').forEach(d => d.remove());
+        document.querySelectorAll('.history-options-btn.active').forEach(b => b.classList.remove('active'));
 
-        const avatar = document.createElement('div');
-        avatar.className = 'msg-avatar';
-        avatar.textContent = '✨';
+        buttonEl.classList.add('active');
 
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble';
+        const dropdown = document.createElement('div');
+        dropdown.className = 'history-dropdown';
 
-        const typing = document.createElement('div');
-        typing.className = 'typing-indicator';
-        typing.innerHTML = '<span></span><span></span><span></span>';
+        // Edit Button
+        const editBtn = document.createElement('button');
+        editBtn.className = 'dropdown-item';
+        editBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg> Ubah Nama`;
+        editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.remove();
+            buttonEl.classList.remove('active');
+            enableEditMode(chatId, titleSpanEl);
+        });
 
-        bubble.appendChild(typing);
-        row.appendChild(avatar);
-        row.appendChild(bubble);
+        // Delete Button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'dropdown-item delete';
+        deleteBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Hapus`;
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.remove();
+            deleteChat(chatId);
+        });
 
-        return row;
+        dropdown.appendChild(editBtn);
+        dropdown.appendChild(deleteBtn);
+        
+        buttonEl.parentElement.appendChild(dropdown);
     }
 
-    // ───────────── Send Message ─────────────
+    function enableEditMode(chatId, titleSpanEl) {
+        const chat = chats.find(c => c.id === chatId);
+        if (!chat) return;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'history-edit-input';
+        input.value = chat.title;
+
+        const saveTitle = () => {
+            const newTitle = input.value.trim();
+            if (newTitle) {
+                chat.title = newTitle;
+                saveChats();
+            }
+            renderHistoryList();
+        };
+
+        input.addEventListener('blur', saveTitle);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveTitle();
+            if (e.key === 'Escape') renderHistoryList(); // cancel
+        });
+
+        input.addEventListener('click', e => e.stopPropagation());
+
+        titleSpanEl.replaceWith(input);
+        input.focus();
+    }
+
+    function deleteChat(chatId) {
+        chats = chats.filter(c => c.id !== chatId);
+        saveChats();
+        
+        if (currentChatId === chatId) {
+            startNewChat();
+        } else {
+            renderHistoryList();
+        }
+    }
+
+    function loadChat(chatId) {
+        const chat = chats.find(c => c.id === chatId);
+        if (!chat) return;
+
+        currentChatId = chat.id;
+        chatHistory = [...chat.history];
+        
+        welcomeScreen.style.display = 'none';
+        messagesContainer.innerHTML = '';
+
+        // Render existing messages
+        chatHistory.forEach(msg => {
+            if (msg.role === 'user') {
+                const userRow = document.createElement('div');
+                userRow.className = 'message-row user-row';
+                userRow.innerHTML = `<div class="user-bubble">${escapeHTML(msg.text)}</div>`;
+                messagesContainer.appendChild(userRow);
+            } else {
+                const aiRow = document.createElement('div');
+                aiRow.className = 'message-row ai-row';
+                aiRow.innerHTML = `
+                    <div class="ai-avatar">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
+                    </div>
+                    <div class="ai-content">${marked.parse(msg.text)}</div>
+                `;
+                messagesContainer.appendChild(aiRow);
+                aiRow.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
+            }
+        });
+
+        renderHistoryList();
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        chatArea.scrollTo({ top: chatArea.scrollHeight, behavior: 'smooth' });
+    }
+
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text || isProcessing) return;
 
         isProcessing = true;
         btnSend.disabled = true;
+        welcomeScreen.style.display = 'none';
 
-        // Hide welcome screen
-        if (welcomeScreen) welcomeScreen.style.display = 'none';
+        // 1. Create chat if it doesn't exist
+        if (!currentChatId) {
+            currentChatId = generateId();
+            chats.push({
+                id: currentChatId,
+                title: generateTitle(text),
+                history: [],
+                updatedAt: Date.now()
+            });
+            renderHistoryList();
+        }
 
-        // Add user message
-        const userMsg = createMessageElement('user', text);
-        messagesContainer.appendChild(userMsg);
-        messageCount++;
-        promptCount++;
-        updateStats();
+        // Render User Message
+        const userRow = document.createElement('div');
+        userRow.className = 'message-row user-row';
+        userRow.innerHTML = `<div class="user-bubble">${escapeHTML(text)}</div>`;
+        messagesContainer.appendChild(userRow);
 
-        // Clear input
         chatInput.value = '';
         chatInput.style.height = 'auto';
         scrollToBottom();
 
-        // Show typing indicator
-        const typingEl = createTypingIndicator();
-        messagesContainer.appendChild(typingEl);
+        // Render AI placeholder
+        const aiRow = document.createElement('div');
+        aiRow.className = 'message-row ai-row';
+        aiRow.innerHTML = `
+            <div class="ai-avatar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
+            </div>
+            <div class="ai-content"><i style="color: var(--text-secondary);">Mengetik...</i></div>
+        `;
+        messagesContainer.appendChild(aiRow);
         scrollToBottom();
 
         try {
-            const payload = {
-                message: text,
-                history: chatHistory
-            };
-            
-            // Simpan pesan user ke history untuk request berikutnya
             chatHistory.push({ role: 'user', text: text });
+            
+            // Save immediately after user sends
+            updateCurrentChatHistory();
 
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ message: text, history: chatHistory })
             });
-
             const data = await response.json();
 
-            // Remove typing indicator
-            typingEl.remove();
-
             if (data.error) {
-                const errorMsg = createMessageElement('assistant', `⚠️ Error: ${data.error}`);
-                messagesContainer.appendChild(errorMsg);
+                aiRow.querySelector('.ai-content').innerHTML = `<p style="color: #ef4444;">⚠️ Error: ${data.error}</p>`;
             } else {
-                // Simpan balasan AI ke history
                 chatHistory.push({ role: 'assistant', text: data.reply });
-
-                // Add assistant message with typing effect
-                const assistantRow = document.createElement('div');
-                assistantRow.className = 'message-row assistant-row';
-
-                const avatar = document.createElement('div');
-                avatar.className = 'msg-avatar';
-                avatar.textContent = '✨';
-
-                const bubble = document.createElement('div');
-                bubble.className = 'msg-bubble';
-
-                const msgContent = document.createElement('div');
-                msgContent.className = 'msg-content';
-
-                bubble.appendChild(msgContent);
-                assistantRow.appendChild(avatar);
-                assistantRow.appendChild(bubble);
-                messagesContainer.appendChild(assistantRow);
-
-                // Typing animation — reveal char by char, then render final markdown
-                await typewriterEffect(msgContent, data.reply);
-
-                messageCount++;
-                updateStats();
+                updateCurrentChatHistory();
+                
+                // Render markdown
+                aiRow.querySelector('.ai-content').innerHTML = marked.parse(data.reply);
+                
+                // Highlight syntax
+                aiRow.querySelectorAll('pre code').forEach((block) => hljs.highlightElement(block));
             }
         } catch (error) {
-            typingEl.remove();
-            const errorMsg = createMessageElement('assistant', `⚠️ Gagal terhubung ke server: ${error.message}`);
-            messagesContainer.appendChild(errorMsg);
+            aiRow.querySelector('.ai-content').innerHTML = `<p style="color: #ef4444;">⚠️ Gagal terhubung ke server. Periksa koneksi internet Anda.</p>`;
         }
 
         isProcessing = false;
@@ -281,28 +370,24 @@ document.addEventListener('DOMContentLoaded', () => {
         chatInput.focus();
     }
 
-    // ───────────── Typewriter Effect ─────────────
-    async function typewriterEffect(element, text) {
-        // Show plain text char by char
-        let displayed = '';
-        const speed = 6; // ms per character
-        const chunkSize = 3; // characters per frame for faster rendering
-
-        for (let i = 0; i < text.length; i += chunkSize) {
-            displayed += text.slice(i, i + chunkSize);
-            element.textContent = displayed + '▌';
-            scrollToBottom();
-            await sleep(speed);
+    function updateCurrentChatHistory() {
+        const chat = chats.find(c => c.id === currentChatId);
+        if (chat) {
+            chat.history = [...chatHistory];
+            chat.updatedAt = Date.now();
+            saveChats();
         }
-
-        // Final render — replace with full markdown
-        element.innerHTML = marked.parse(text);
-        addCopyButtons(element);
-        scrollToBottom();
     }
 
-    function sleep(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
     }
-
 });
