@@ -75,9 +75,7 @@
             <!-- Header & Toggle Sidebar -->
             <div class="flex items-center justify-between p-3">
                 <div class="flex items-center gap-3 overflow-hidden hide-on-collapse">
-                    <div class="min-w-[32px] h-8 bg-black dark:bg-white rounded-lg flex items-center justify-center">
-                        <span class="text-white dark:text-black font-bold text-sm">VA</span>
-                    </div>
+                    <img src="{{ url_for('static', filename='img/technology.png') }}" alt="Logo" class="min-w-[32px] h-8 object-contain">
                     <span class="font-semibold text-lg whitespace-nowrap text-black dark:text-white">ViraAkbar.AI</span>
                 </div>
                 <button id="btnToggleSidebar" title="Toggle Sidebar" class="p-2 mx-auto rounded-md hover:bg-hoverLight dark:hover:bg-hoverDark text-gray-600 dark:text-gray-400 transition-colors">
@@ -157,8 +155,8 @@
             <div class="chat-area" id="chatArea">
                 <!-- Welcome Screen -->
                 <div class="welcome-screen" id="welcomeScreen">
-                    <div class="welcome-logo">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
+                    <div class="welcome-logo overflow-hidden">
+                        <img src="{{ url_for('static', filename='img/technology.png') }}" alt="AI Logo" style="width: 48px; height: 48px; object-fit: contain;">
                     </div>
                     <h1>Apa yang bisa saya bantu hari ini?</h1>
                 </div>

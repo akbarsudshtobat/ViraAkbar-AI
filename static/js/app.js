@@ -316,8 +316,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const aiRow = document.createElement('div');
                 aiRow.className = 'message-row ai-row';
                 aiRow.innerHTML = `
-                    <div class="ai-avatar">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
+                    <div class="ai-avatar overflow-hidden">
+                        <img src="/static/img/technology.png" alt="AI" style="width: 100%; height: 100%; object-fit: contain;">
                     </div>
                     <div class="ai-content">${marked.parse(msg.text)}</div>
                 `;
@@ -368,8 +368,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const aiRow = document.createElement('div');
         aiRow.className = 'message-row ai-row';
         aiRow.innerHTML = `
-            <div class="ai-avatar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 12 2.1 7.1"></path><path d="M12 12l9.9 4.9"></path></svg>
+            <div class="ai-avatar overflow-hidden">
+                <img src="/static/img/technology.png" alt="AI" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
             <div class="ai-content"><i style="color: var(--text-secondary);">Mengetik...</i></div>
         `;
