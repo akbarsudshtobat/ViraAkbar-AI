@@ -1,6 +1,8 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, send_from_directory
 import os
+import json
 from groq import Groq
+from duckduckgo_search import DDGS
 
 # Load variables from .env file automatically
 if os.path.exists('.env'):
@@ -54,7 +56,7 @@ def chat():
         # System prompt
         formatted_history.append({
             "role": "system",
-            "content": "Kamu adalah ViraAkbar Engine v2. Asisten AI Premium yang sangat cerdas, responsif, dan dibuat oleh Akbar. Jawab dengan gaya keren, solutif, dan gunakan bahasa Indonesia yang santun namun santai."
+            "content": "Kamu adalah ViraAkbar Engine v2. Asisten AI Premium yang sangat cerdas, responsif, dan dibuat oleh Akbar. Jawab dengan gaya keren, solutif, dan gunakan bahasa Indonesia yang santun namun santai. Kamu memiliki kemampuan untuk mencari informasi di internet menggunakan alat pencarian jika ditanya tentang berita terbaru, cuaca, tokoh, atau informasi aktual yang mungkin tidak ada di data awalmu."
         })
         
         for msg in history_data:
@@ -74,13 +76,72 @@ def chat():
             "content": user_message
         })
 
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_web",
+                    "description": "Cari informasi di internet (web search) untuk menjawab pertanyaan terkini atau mencari berita terbaru.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "Kata kunci pencarian, misalnya 'berita hari ini', 'harga bitcoin terbaru', dll.",
+                            }
+                        },
+                        "required": ["query"],
+                    },
+                },
+            }
+        ]
+
         chat_completion = local_client.chat.completions.create(
             messages=formatted_history,
             model="llama-3.3-70b-versatile",
-            temperature=0.7
+            temperature=0.7,
+            tools=tools,
+            tool_choice="auto"
         )
 
-        return jsonify({'reply': chat_completion.choices[0].message.content})
+        response_message = chat_completion.choices[0].message
+        
+        # Cek apakah model memanggil tool (fungsi)
+        if response_message.tool_calls:
+            # Model ingin menggunakan alat
+            formatted_history.append(response_message)
+            for tool_call in response_message.tool_calls:
+                if tool_call.function.name == "search_web":
+                    function_args = json.loads(tool_call.function.arguments)
+                    query = function_args.get("query")
+                    
+                    # Lakukan pencarian web
+                    search_results = "Tidak ada hasil."
+                    try:
+                        results = DDGS().text(query, max_results=3)
+                        if results:
+                            search_results = json.dumps(results, ensure_ascii=False)
+                    except Exception as e:
+                        search_results = f"Error saat mencari: {str(e)}"
+                    
+                    # Tambahkan hasil pencarian ke history
+                    formatted_history.append({
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": "search_web",
+                        "content": search_results,
+                    })
+            
+            # Panggil model lagi dengan hasil pencarian
+            second_response = local_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=formatted_history,
+                temperature=0.7
+            )
+            return jsonify({'reply': second_response.choices[0].message.content})
+
+        # Jika tidak ada tool call, langsung return
+        return jsonify({'reply': response_message.content})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -92,7 +153,10 @@ def new_chat():
         del chat_sessions[session_id]
     session['session_id'] = os.urandom(16).hex()
     return jsonify({'status': 'ok'})
+@app.route('/google024f7ba3a16b7ac7.html')
+def google_verification():
+    return send_from_directory('static', 'google024f7ba3a16b7ac7.html')
 
-# ───────────────── RUN ─────────────────
-if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+
+if __name__ == "__main__":
+    app.run()
